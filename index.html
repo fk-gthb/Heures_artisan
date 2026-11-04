@@ -19,6 +19,10 @@
   label{display:block;font-size:.85rem;color:var(--muted);margin:0 0 4px}
   input,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
   textarea{min-height:80px;resize:vertical}
+  /* iPhone : les champs date/heure ont une largeur minimale imposée par Safari */
+  input,textarea{display:block;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none}
+  input[type=date],input[type=time]{min-height:46px;line-height:1.2}
+  input::-webkit-date-and-time-value{text-align:left}
   .row{display:flex;gap:10px;margin-bottom:12px}.row>div{flex:1;min-width:0}
   .full{margin-bottom:12px}
   .duree{font-size:.9rem;color:var(--muted);margin:-4px 0 12px}
