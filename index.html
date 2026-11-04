@@ -112,8 +112,12 @@ $('fin').addEventListener('input', majDuree);
 document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
   onglet = b.dataset.onglet;
   document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  effacerMsg();
   charger();
 }));
+// le message de confirmation disparaît dès qu'on change d'onglet ou qu'on recommence une saisie
+function effacerMsg(){ $('msg').textContent = ''; $('msg').className = 'msg'; }
+['date','debut','fin','lieu','travail'].forEach(id => $(id).addEventListener('input', effacerMsg));
 $('prec').addEventListener('click', () => { mois = decaler(mois, -1); charger(); });
 $('suiv').addEventListener('click', () => { mois = decaler(mois, 1); charger(); });
 
