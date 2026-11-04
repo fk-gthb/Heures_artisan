@@ -178,7 +178,8 @@ $('form').addEventListener('submit', async ev => {
     const d = await r.json();
     if(!d.ok) throw new Error(d.erreur);
     msg.textContent = `Enregistré dans l’onglet ${onglet}.`;
-    $('debut').value = ''; $('fin').value = ''; $('travail').value = ''; majDuree();
+    $('debut').value = ''; $('fin').value = ''; $('lieu').value = ''; $('travail').value = ''; majDuree();
+    setTimeout(effacerMsg, 4000);
     mois = $('date').value.slice(0,7);
     charger();
   }catch(e){
