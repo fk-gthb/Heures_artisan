@@ -112,9 +112,16 @@ $('fin').addEventListener('input', majDuree);
 document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
   onglet = b.dataset.onglet;
   document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
-  effacerMsg();
+  reinitialiser();
   charger();
 }));
+// remet le formulaire à zéro (date du jour, champs vides avec leurs exemples)
+function reinitialiser(){
+  $('form').reset();
+  $('date').value = new Date().toLocaleDateString('sv-SE');
+  majDuree();
+  effacerMsg();
+}
 // le message de confirmation disparaît dès qu'on change d'onglet ou qu'on recommence une saisie
 function effacerMsg(){ $('msg').textContent = ''; $('msg').className = 'msg'; }
 ['date','debut','fin','lieu','travail'].forEach(id => $(id).addEventListener('input', effacerMsg));
