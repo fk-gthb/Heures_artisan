@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heures artisan</title>
+<style>
+  :root{--bg:#f6f4ef;--card:#fff;--ink:#1d1d1b;--muted:#6b6a65;--line:#e4e1d8;--accent:#2f5d50;--accent-ink:#fff;--err:#a23b2a}
+  @media (prefers-color-scheme:dark){:root{--bg:#171715;--card:#22221f;--ink:#ecebe6;--muted:#9c9a92;--line:#34332f;--accent:#7fb8a6;--accent-ink:#10201b;--err:#e08a7a}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+  main{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+  h1{font-size:1.35rem;margin:0 0 16px}
+  h2{font-size:1.05rem;margin:0}
+  .tabs{display:flex;gap:6px;margin-bottom:16px}
+  .tabs button{flex:1;padding:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;font:inherit;font-weight:600;cursor:pointer}
+  .tabs button[aria-selected=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  label{display:block;font-size:.85rem;color:var(--muted);margin:0 0 4px}
+  input,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+  textarea{min-height:80px;resize:vertical}
+  .row{display:flex;gap:10px;margin-bottom:12px}.row>div{flex:1;min-width:0}
+  .full{margin-bottom:12px}
+  .duree{font-size:.9rem;color:var(--muted);margin:-4px 0 12px}
+  .btn{width:100%;padding:13px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer}
+  .btn:disabled{opacity:.6}
+  .msg{min-height:1.2em;margin-top:10px;font-size:.9rem}.msg.err{color:var(--err)}
+  .head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+  .nav{display:flex;align-items:center;gap:6px}
+  .nav button{width:36px;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:1.1rem;cursor:pointer}
+  .nav span{min-width:8.5em;text-align:center;font-weight:600}
+  .total{font-size:1.6rem;font-weight:700;margin:8px 0 4px}
+  .total small{font-size:.9rem;font-weight:500;color:var(--muted)}
+  .entry{padding:10px 0;border-top:1px solid var(--line)}
+  .entry .l1{display:flex;justify-content:space-between;gap:8px;font-size:.95rem}
+  .entry .l1 b{white-space:nowrap}
+  .entry .lieu{font-size:.9rem;font-weight:600;margin-top:2px}
+  .entry .trav{font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
+  .empty{color:var(--muted);font-size:.95rem;margin:8px 0 0}
+</style>
+</head>
+<body>
+<main>
+  <h1>Heures artisan</h1>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-onglet="Florian" aria-selected="true">Florian</button>
+    <button role="tab" data-onglet="Simon" aria-selected="false">Simon</button>
+  </div>
+
+  <form class="card" id="form">
+    <div class="full"><label for="date">Date</label><input type="date" id="date" required></div>
+    <div class="row">
+      <div><label for="debut">Début de l’intervention</label><input type="time" id="debut" required></div>
+      <div><label for="fin">Fin de l’intervention</label><input type="time" id="fin" required></div>
+    </div>
+    <div class="duree" id="duree"></div>
+    <div class="full"><label for="lieu">Lieu</label><input type="text" id="lieu" placeholder="ex. Appartement rue …" required></div>
+    <div class="full"><label for="travail">Travail réalisé</label><textarea id="travail" placeholder="ex. Pose plinthes salon" required></textarea></div>
+    <button class="btn" id="envoyer">Enregistrer</button>
+    <div class="msg" id="msg"></div>
+  </form>
+
+  <section class="card">
+    <div class="head">
+      <h2 id="titreMois">Heures du mois</h2>
+      <div class="nav">
+        <button type="button" id="prec" aria-label="Mois précédent">‹</button>
+        <span id="libMois"></span>
+        <button type="button" id="suiv" aria-label="Mois suivant">›</button>
+      </div>
+    </div>
+    <div class="total" id="total"></div>
+    <div id="liste"><p class="empty">Chargement…</p></div>
+  </section>
+</main>
+
+<script>
+// Adresse de l'application Apps Script (Déployer > Nouveau déploiement > Application Web)
+const API_URL = 'COLLER_ICI_L_URL_APPS_SCRIPT';
+
+const $ = id => document.getElementById(id);
+const store = { get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}, del(k){try{localStorage.removeItem(k)}catch(e){}} };
+
+let onglet = 'Florian';
+const now = new Date();
+let mois = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+let code = store.get('code_heures');
+function demanderCode(){ code = prompt("Code d'accès :") || ''; store.set('code_heures', code); }
+if(!code) demanderCode();
+
+$('date').value = now.toLocaleDateString('sv-SE');
+
+// ---- utilitaires
+const minutes = h => { const [a,b] = h.split(':').map(Number); return a*60 + b; };
+const fmtH = n => n.toLocaleString('fr-FR', {maximumFractionDigits: 2}) + ' h';
+const fmtHM = n => { const m = Math.round(n*60); return `${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')}`; };
+const fmtD = s => { const [y,m,d] = s.split('-'); return new Date(y, m-1, d).toLocaleDateString('fr-FR', {weekday:'short', day:'2-digit', month:'2-digit'}); };
+const fmtMois = k => { const [y,m] = k.split('-'); const t = new Date(y, m-1, 1).toLocaleDateString('fr-FR', {month:'long', year:'numeric'}); return t.charAt(0).toUpperCase() + t.slice(1); };
+const decaler = (k, n) => { const [y,m] = k.split('-').map(Number); const d = new Date(y, m-1+n, 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; };
+
+// ---- durée en direct
+function majDuree(){
+  const d = $('debut').value, f = $('fin').value;
+  if(!d || !f){ $('duree').textContent = ''; return; }
+  const diff = minutes(f) - minutes(d);
+  $('duree').textContent = diff > 0 ? 'Durée : ' + fmtHM(diff/60) : 'La fin doit être après le début.';
+}
+$('debut').addEventListener('input', majDuree);
+$('fin').addEventListener('input', majDuree);
+
+// ---- onglets et mois
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  onglet = b.dataset.onglet;
+  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  charger();
+}));
+$('prec').addEventListener('click', () => { mois = decaler(mois, -1); charger(); });
+$('suiv').addEventListener('click', () => { mois = decaler(mois, 1); charger(); });
+
+// ---- lecture (visualisation seule)
+let requete = 0;
+async function charger(){
+  const n = ++requete;
+  $('titreMois').textContent = 'Heures du mois – ' + onglet;
+  $('libMois').textContent = fmtMois(mois);
+  $('total').textContent = '';
+  $('liste').innerHTML = '<p class="empty">Chargement…</p>';
+  try{
+    const r = await fetch(`${API_URL}?onglet=${encodeURIComponent(onglet)}&mois=${mois}&code=${encodeURIComponent(code)}`);
+    const d = await r.json();
+    if(n !== requete) return;
+    if(!d.ok){ if(d.erreur === 'code'){ store.del('code_heures'); demanderCode(); return charger(); } throw new Error(d.erreur); }
+    afficher(d.lignes);
+  }catch(e){
+    if(n === requete) $('liste').innerHTML = '<p class="empty">Impossible de charger les heures.</p>';
+  }
+}
+
+function afficher(lignes){
+  const liste = $('liste');
+  liste.textContent = '';
+  const total = lignes.reduce((s,l) => s + l.duree, 0);
+  $('total').innerHTML = '';
+  $('total').append(fmtHM(total) + ' ');
+  const sm = document.createElement('small');
+  sm.textContent = `(${fmtH(total)} · ${lignes.length} intervention${lignes.length > 1 ? 's' : ''})`;
+  $('total').append(sm);
+  if(!lignes.length){ liste.innerHTML = '<p class="empty">Aucune intervention ce mois-ci.</p>'; return; }
+  lignes.sort((a,b) => (b.date + b.debut).localeCompare(a.date + a.debut));
+  lignes.forEach(l => {
+    const e = document.createElement('div'); e.className = 'entry';
+    const l1 = document.createElement('div'); l1.className = 'l1';
+    const s1 = document.createElement('span'); s1.textContent = `${fmtD(l.date)} · ${l.debut} – ${l.fin}`;
+    const s2 = document.createElement('b'); s2.textContent = fmtHM(l.duree);
+    l1.append(s1, s2);
+    const lieu = document.createElement('div'); lieu.className = 'lieu'; lieu.textContent = l.lieu;
+    const trav = document.createElement('div'); trav.className = 'trav'; trav.textContent = l.travail;
+    e.append(l1, lieu, trav);
+    liste.appendChild(e);
+  });
+}
+
+// ---- enregistrement
+$('form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const msg = $('msg'), btn = $('envoyer');
+  const debut = $('debut').value, fin = $('fin').value;
+  if(minutes(fin) <= minutes(debut)){ msg.className = 'msg err'; msg.textContent = 'La fin doit être après le début.'; return; }
+  btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Enregistrement…';
+  try{
+    const r = await fetch(API_URL, { method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({ code, onglet, date: $('date').value, debut, fin,
+        lieu: $('lieu').value.trim(), travail: $('travail').value.trim() }) });
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.erreur);
+    msg.textContent = `Enregistré dans l’onglet ${onglet}.`;
+    $('debut').value = ''; $('fin').value = ''; $('travail').value = ''; majDuree();
+    mois = $('date').value.slice(0,7);
+    charger();
+  }catch(e){
+    msg.className = 'msg err';
+    msg.textContent = e.message === 'code' ? 'Code d’accès incorrect.' : 'Erreur, réessayez.';
+    if(e.message === 'code'){ store.del('code_heures'); demanderCode(); }
+  }finally{ btn.disabled = false; }
+});
+
+charger();
+</script>
+</body>
+</html>
